@@ -5,10 +5,12 @@ const bodyParser = require('body-parser');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
-const port = 3000; // Choose a port for your server
+const port = 3000; // Escolha uma porta para o seu servidor
 
-// MongoDB connection setup
-const uri = 'mongodb://127.0.0.1:27017';
+app.use(cors());
+
+// Configuração da conexão MongoDB
+const uri = 'mongodb://localhost:27017';
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -17,86 +19,84 @@ const client = new MongoClient(uri, {
   },
 });
 
-app.use(cors());
-app.use(bodyParser.json());
-
-// Middleware to handle MongoDB connection
+// Middleware para manipular a conexão com o MongoDB
 app.use(async (req, res, next) => {
   try {
-    if (!client.isConnected()) {
+    const isConnected = client.topology && client.topology.isConnected();
+
+    if (!isConnected) {
       await client.connect();
     }
+
     req.dbClient = client;
     next();
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Erro na conexão com o MongoDB:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 
-// API endpoint to fetch nature data
+
+// Tratamento de erros centralizado
+app.use((err, req, res, next) => {
+  console.error('Erro:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
+
+// Endpoints para acessar dados do MongoDB
 app.get('/api/natures', async (req, res) => {
   try {
-    await client.connect();
-    const collectionNature = client.db('natures').collection('nature');
-
+    const collectionNature = req.dbClient.db('natures').collection('nature');
     const nature = await collectionNature.find().toArray();
-
     res.json(nature);
   } catch (error) {
-    console.error('Error fetching natures:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  } finally {
-    await client.close();
+    next(error);
   }
 });
+
 app.get('/api/natures/type', async (req, res) => {
   try {
-    await client.connect();
-    const collectionType = client.db('natures').collection('nature_type');
-
+    const collectionType = req.dbClient.db('natures').collection('nature_type');
     const type = await collectionType.find().toArray();
-
     res.json(type);
   } catch (error) {
-    console.error('Error fetching nature types:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  } finally {
-    await client.close();
+    next(error);
   }
 });
+
 app.get('/api/natures/doc', async (req, res) => {
   try {
-    await client.connect();
-
-    const collectionDoc = client.db('natures').collection('doc_type');
-
+    const collectionDoc = req.dbClient.db('natures').collection('doc_type');
     const doc = await collectionDoc.find().toArray();
-
     res.json(doc);
   } catch (error) {
-    console.error('Error fetching nature types:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  } finally {
-    await client.close();
+    next(error);
   }
 });
+
 app.get('/api/natures/sub', async (req, res) => {
   try {
-    await client.connect();
-    const collectionSub = client.db('natures').collection('sub_nature');
-
+    const collectionSub = req.dbClient.db('natures').collection('sub_nature');
     const sub = await collectionSub.find().toArray();
-
     res.json(sub);
   } catch (error) {
-    console.error('Error fetching nature types:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  } finally {
-    await client.close();
+    next(error);
   }
 });
+
+// Inicia o servidor
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Servidor rodando na porta ${port}`);
+});
+
+// Fechar a conexão quando o aplicativo é encerrado
+process.on('SIGINT', async () => {
+  await client.close();
+  process.exit();
+});
+
+process.on('SIGTERM', async () => {
+  await client.close();
+  process.exit();
 });
