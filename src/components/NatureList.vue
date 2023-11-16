@@ -2,17 +2,16 @@
 <template>
   <div>
     <ul>
-      <li v-for="natureT in natureTypes" :key="natureT._id">
-        {{ natureT.code }} -* {{ natureT.name }}
+      <li v-for="natureType in natureTypes" :key="natureType._id">
+        {{ natureType.code }} - {{ natureType.name }}
         <ul>
-          <template v-for="(code, index) in natureT.natureCodes">
+          <template v-for="(code, index) in natureType.natureCodes">
             <li :key="index">
-             
-              <template v-if="getSubNatureCodes(code) === undefined">
-                jesus
-                {{ code }} -+ {{ getDescriptionForCode(code) }}
+              <template v-if="getSubNatureCodes(code).length === 0">
+                {{ code }} - {{ getDescriptionForCode(code) }}
                 <ul>
-                  <li v-for="(docType, docIndex) in getDocTypesForCode(code)" :key="docIndex">
+                
+                  <li v-for="(docType, docIndex) in getDocType(code)" :key="docIndex">
                     {{ docType }} - {{ getDocTypeName(docType) }}
                   </li>
                 </ul>
@@ -108,16 +107,20 @@ export default {
     },
     getDescriptionForCode(code) {
       const nature = this.natures.find((item) => item.code === code);
-      return nature ? nature.name : "N/A";
+      return nature?.name || 'N/A'
     },
     getSubNatureCodes(code) {
       const nature = this.natures.find((item) => item.code === code);
-      console.log(nature.subNatureCodes);
-      return nature ? nature.subNatureCodes || [] : 0;
+      console.log(nature.subNatureCodes)
+      return nature?.subNatureCodes || []
+    },
+    getDocType(code) {
+      const nature = this.natures.find((item) => item.code === code);
+      return nature?.rules?.docTypes || []
     },
     getSubNatureName(subCode) {
       const subNature = this.sub.find((item) => item.code === subCode);
-      return subNature ? subNature.name : "N/A";
+      return subNature ? subNature.name : "N/A"
     },
     getDocTypesForCode(subCode) {
       const nature = this.sub.find((item) => item.code === subCode);
